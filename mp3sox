@@ -1,0 +1,815 @@
+#!/bin/bash
+
+# ------------------------------------------------------------------------------
+# settings                                                              settings
+# ------------------------------------------------------------------------------
+set -o errtrace  # any trap on ERR is inherited by shell functions,
+                 #   command substitutions, and commands executed in a subshell
+                 #   environment
+set -o nounset   # treat unset variables and parameters other than the special
+                 #   parameters "@" and "*" as an error when performing
+                 #   parameter expansion
+set -o pipefail  # the return value of a pipeline is the value of the last
+                 #   (rightmost) command to exit with a non-zero status, or
+                 #   zero if all commands in the pipeline exit successfully
+
+# set language
+export LANG="en_US.UTF-8"
+
+# use dot as decimal separator
+export LC_NUMERIC="en_US.UTF-8"
+
+# terminal colors
+readonly    NONE=$(tput sgr0)
+readonly     RED=$(tput setaf 1)
+readonly   GREEN=$(tput setaf 2)
+readonly  YELLOW=$(tput setaf 3)
+readonly    BLUE=$(tput setaf 4)
+readonly MAGENTA=$(tput setaf 5)
+readonly    CYAN=$(tput setaf 6)
+readonly   WHITE=$(tput setaf 7)
+
+# ------------------------------------------------------------------------------
+# functions                                                            functions
+# ------------------------------------------------------------------------------
+
+# ---------
+# show_help
+# ---------
+#
+#
+#
+function show_help()
+{
+  echo
+  echo "SYNOPSIS"
+  echo "   mp3sox [options]"
+  echo
+  echo "DESCRIPTION"
+  echo "   mp3sox reads NULL terminated filenames of audio (media) files from stdin"
+  echo "   and creates a shell script in which these files are encoded to mp3 after"
+  echo "   they have been processed by an arbitrary number of sox effects."
+  echo
+  echo "OPTIONS"
+  echo "   -h         show help and exit"
+  echo "   -v         show version and exit"
+  echo "   -d <dir>   read filenames from directory"
+  echo "   -p <file>  read filenames from m3u file"
+  echo
+  echo "EXAMPLE"
+  echo "   find symphony9/ -type f -print0 | sort -z | mp3sox > symphony9.sh"
+  echo "   mp3sox -d symphony9/ > symphony9.sh"
+  echo "   mp3sox -p playlist.m3u > playlist.sh"
+  echo
+}
+
+# ------------
+# show_version
+# ------------
+#
+#
+#
+function show_version()
+{
+  echo "v2019-01-30"
+}
+
+# -------
+# failmsg
+# -------
+#
+# This function prints a red colored message via stderr.
+#
+function failmsg()
+{
+  # push to stderr
+  echo -e "${RED}[FAIL]${NONE} $1" 1>&2
+}
+
+# -------
+# warnmsg
+# -------
+#
+# This function prints a yellow colored message via stderr.
+#
+function warnmsg()
+{
+  # push to stderr
+  echo -e "${YELLOW}[WARN]${NONE} $1" 1>&2
+}
+
+# -------
+# infomsg
+# -------
+#
+# This function prints a blue colored message via stderr.
+#
+function infomsg()
+{
+  # push to stderr
+  echo -e "${BLUE}[INFO]${NONE} $1" 1>&2
+}
+
+# -------
+# donemsg
+# -------
+#
+# This function prints a green colored message via stderr.
+#
+function donemsg()
+{
+  # push to stderr
+  echo -e "${GREEN}[DONE]${NONE} $1" 1>&2
+}
+
+# ----------
+# show_intro
+# ----------
+#
+#
+#
+function show_intro()
+{
+  echo "#!/bin/bash"
+  echo
+  echo "# ------------------------------------------------------------------------------"
+  echo "# settings                                                              settings"
+  echo "# ------------------------------------------------------------------------------"
+  echo "set -o errtrace  # any trap on ERR is inherited by shell functions,"
+  echo "                 #   command substitutions, and commands executed in a subshell"
+  echo "                 #   environment"
+  echo "set -o nounset   # treat unset variables and parameters other than the special"
+  echo "                 #   parameters \"@\" and \"*\" as an error when performing"
+  echo "                 #   parameter expansion"
+  echo "set -o pipefail  # the return value of a pipeline is the value of the last"
+  echo "                 #   (rightmost) command to exit with a non-zero status, or"
+  echo "                 #   zero if all commands in the pipeline exit successfully"
+  echo
+  echo "# set language"
+  echo "export LANG=\"en_US.UTF-8\""
+  echo
+  echo "# use dot as decimal separator"
+  echo "export LC_NUMERIC=\"en_US.UTF-8\""
+  echo
+  echo "# terminal colors"
+  echo "readonly    NONE=\$(tput sgr0)"
+  echo "readonly     RED=\$(tput setaf 1)"
+  echo "readonly   GREEN=\$(tput setaf 2)"
+  echo "readonly  YELLOW=\$(tput setaf 3)"
+  echo "readonly    BLUE=\$(tput setaf 4)"
+  echo "readonly MAGENTA=\$(tput setaf 5)"
+  echo "readonly    CYAN=\$(tput setaf 6)"
+  echo "readonly   WHITE=\$(tput setaf 7)"
+  echo
+  echo "# ------------------------------------------------------------------------------"
+  echo "# functions                                                            functions"
+  echo "# ------------------------------------------------------------------------------"
+  echo
+  echo "# -------"
+  echo "# failmsg"
+  echo "# -------"
+  echo "#"
+  echo "# This function prints a red colored message via stderr."
+  echo "#"
+  echo "function failmsg()"
+  echo "{"
+  echo "  # push to stderr"
+  echo "  echo -e \"\${RED}[FAIL]\${NONE} \$1\" 1>&2"
+  echo "}"
+  echo
+  echo "# -------"
+  echo "# warnmsg"
+  echo "# -------"
+  echo "#"
+  echo "# This function prints a yellow colored message via stderr."
+  echo "#"
+  echo "function warnmsg()"
+  echo "{"
+  echo "  # push to stderr"
+  echo "  echo -e \"\${YELLOW}[WARN]\${NONE} \$1\" 1>&2"
+  echo "}"
+  echo
+  echo "# -------"
+  echo "# infomsg"
+  echo "# -------"
+  echo "#"
+  echo "# This function prints a blue colored message via stderr."
+  echo "#"
+  echo "function infomsg()"
+  echo "{"
+  echo "  # push to stderr"
+  echo "  echo -e \"\${BLUE}[INFO]\${NONE} \$1\" 1>&2"
+  echo "}"
+  echo
+  echo "# -------"
+  echo "# donemsg"
+  echo "# -------"
+  echo "#"
+  echo "# This function prints a green colored message via stderr."
+  echo "#"
+  echo "function donemsg()"
+  echo "{"
+  echo "  # push to stderr"
+  echo "  echo -e \"\${GREEN}[DONE]\${NONE} \$1\" 1>&2"
+  echo "}"
+  echo
+  echo "# ----------"
+  echo "# utf82ascii"
+  echo "# ----------"
+  echo "#"
+  echo "# ... | utf82ascii | ..."
+  echo "#"
+  echo "function utf82ascii()"
+  echo "{"
+  echo "  sed --regexp-extended \\"
+  echo "      --expression=\""
+  echo "        # escape all colons"
+  echo "        s/:/:c/g"
+  echo
+  echo "        # escape all native question marks (iconv may introduce much more)"
+  echo "        s/\\\\?/:q/g"
+  echo
+  echo "        # collection of characters that aren't translated (suitable) by iconv"
+  echo "        s/¦/|/g"
+  echo "        s/¡/!/g"
+  echo "        s/¿/:q/g"
+  echo "        s/„/\\\"/g"
+  echo "        s/«/\\\"/g"
+  echo "        s/»/\\\"/g"
+  echo "        s/÷/\\//g"
+  echo "        s/±/+-/g"
+  echo "        s/¹/^1/g"
+  echo "        s/²/^2/g"
+  echo "        s/³/^3/g"
+  echo "        s/Ä/Ae/g"
+  echo "        s/ä/ae/g"
+  echo "        s/Ö/Oe/g"
+  echo "        s/ö/oe/g"
+  echo "        s/Ü/Ue/g"
+  echo "        s/ü/ue/g"
+  echo "        s/Ø/Oe/g"
+  echo "        s/ø/oe/g"
+  echo "        s/Ð/Dh/g"
+  echo "        s/ð/dh/g"
+  echo "        s/Þ/Th/g"
+  echo "        s/þ/th/g"
+  echo "      \"                                       \\"
+  echo "  | iconv --from-code \"UTF-8\"                 \\"
+  echo "          --to-code \"ASCII//TRANSLIT//IGNORE\" \\"
+  echo "  | sed --regexp-extended                     \\"
+  echo "        --expression=\""
+  echo "          # remove all question marks introduced by iconv"
+  echo "          s/\\\\?//g"
+  echo
+  echo "          # restore all escaped question marks"
+  echo "          s/:q/?/g"
+  echo
+  echo "          # restore all escaped colons"
+  echo "          s/:c/:/g"
+  echo "        \""
+  echo "}"
+  echo
+  echo "# ------------"
+  echo "# str2basename"
+  echo "# ------------"
+  echo "#"
+  echo "# ... | str2basename | ..."
+  echo "#"
+  echo "function str2basename()"
+  echo "{"
+  echo "  sed --regexp-extended \\"
+  echo "      --expression=\""
+  echo
+  echo "        # convert to lowercase"
+  echo "        s/.+/\\L&/"
+  echo
+  echo "        # replace all non alphanumeric characters"
+  echo "        s/[^[:alnum:]]+/_/g"
+  echo
+  echo "        # trim both ends"
+  echo "        s/^_+//"
+  echo "        s/_+\$//"
+  echo
+  echo "        # limit filename to the first 200 characters"
+  echo "        s/^(.{200}).*/\\1/"
+  echo
+  echo "        # trim end"
+  echo "        s/_+\$//"
+  echo "      \""
+  echo "}"
+  echo
+  echo "# ------"
+  echo "# decode"
+  echo "# ------"
+  echo "#"
+  echo "# \$1  source file (any media)"
+  echo "# \$2  target file (raw audio)"
+  echo "#"
+  echo "function decode()"
+  echo "{"
+  echo "  # show progress"
+  echo "  infomsg \"trying sox decoding: \$1\""
+  echo
+  echo "  # try to get audio encoding"
+  echo "  local ENCODING=\$(soxi -e \"\$1\" 2>\"/dev/null\")"
+  echo
+  echo "  # encoding detected"
+  echo "  if [ -n \"\$ENCODING\" ] ; then"
+  echo
+  echo "    # create raw audio data"
+  echo "    sox \"\$1\"                        \\"
+  echo "        --type     \"raw\"            \\"
+  echo "        --channels \"2\"              \\"
+  echo "        --rate     \"44100\"          \\"
+  echo "        --bits     \"24\"             \\"
+  echo "        --encoding \"signed-integer\" \\"
+  echo "        --endian   \"little\"         \\"
+  echo "        \"\$2\"                        \\"
+  echo "        2>\"/dev/null\""
+  echo
+  echo "    # check resulting file size"
+  echo "    if [ -s \"\$2\" ] ; then"
+  echo
+  echo "      # notify user"
+  echo "      donemsg \"audio decoded: \$1\""
+  echo
+  echo "      # signalize success"
+  echo "      return 0"
+  echo
+  echo "    fi"
+  echo
+  echo "  fi"
+  echo
+  echo "  # show progress"
+  echo "  infomsg \"trying mplayer decoding: \$1\""
+  echo
+  echo "  # try to get audio codec"
+  echo "  local CODEC=\$(mplayer -nogui        \\"
+  echo "                        -ao \"null\"    \\"
+  echo "                        -vo \"null\"    \\"
+  echo "                        -frames 0     \\"
+  echo "                        -identify     \\"
+  echo "                        \"\$1\"          \\"
+  echo "                        2>\"/dev/null\" \\"
+  echo "                | sed -nre \"s/^ID_AUDIO_CODEC=(.+)/\\1/p\")"
+  echo
+  echo "  # codec detected"
+  echo "  if [ -n \"\$CODEC\" ] ; then"
+  echo
+  echo "    # create raw audio data"
+  echo "    mplayer -nogui                                         \\"
+  echo "            -vo \"null\"                                     \\"
+  echo "            -vc \"null\"                                     \\"
+  echo "            -framedrop                                     \\"
+  echo "            -nocorrect-pts                                 \\"
+  echo "            -af \"channels=2,resample=44100:2,format=s24le\" \\"
+  echo "            -ao \"pcm:nowaveheader:fast:file=\$2\"            \\"
+  echo "            \"\$1\"                                           \\"
+  echo "            &>\"/dev/null\""
+  echo
+  echo "    # check resulting file size"
+  echo "    if [ -s \"\$2\" ] ; then"
+  echo
+  echo "      # notify user"
+  echo "      donemsg \"audio decoded: \$1\""
+  echo
+  echo "      # signalize success"
+  echo "      return 0"
+  echo
+  echo "    fi"
+  echo
+  echo "  fi"
+  echo
+  echo "  # notify user"
+  echo "  failmsg \"unable to decode audio: \\\"\$1\\\"\""
+  echo
+  echo "  # signalize trouble"
+  echo "  return 1"
+  echo "}"
+  echo
+  echo "# --------"
+  echo "# playback"
+  echo "# --------"
+  echo "#"
+  echo "#"
+  echo "#"
+  echo "function playback()"
+  echo "{"
+  echo "  play -V0                         \\"
+  echo "       --type     \"raw\"            \\"
+  echo "       --channels \"2\"              \\"
+  echo "       --rate     \"44100\"          \\"
+  echo "       --bits     \"24\"             \\"
+  echo "       --encoding \"signed-integer\" \\"
+  echo "       --endian   \"little\"         \\"
+  echo "       -                           \\"
+  echo "       &>\"/dev/null\""
+  echo "}"
+  echo
+  echo "# -------"
+  echo "# analyze"
+  echo "# -------"
+  echo "#"
+  echo "#"
+  echo "#"
+  echo "function analyze()"
+  echo "{"
+  echo "  # set filenames"
+  echo "  local readonly AUDIO=\"analyze-audio.wav\""
+  echo "  local readonly STATS=\"analyze-stats.txt\""
+  echo "  local readonly INTRO=\"analyze-intro.png\""
+  echo "  local readonly TOTAL=\"analyze-total.png\""
+  echo "  local readonly OUTRO=\"analyze-outro.png\""
+  echo
+  echo "  # show stats"
+  echo "  sox --type     \"raw\"            \\"
+  echo "      --channels \"2\"              \\"
+  echo "      --rate     \"44100\"          \\"
+  echo "      --bits     \"24\"             \\"
+  echo "      --encoding \"signed-integer\" \\"
+  echo "      --endian   \"little\"         \\"
+  echo "      -                           \\"
+  echo "      \"\$AUDIO\"                    \\"
+  echo "      stats                       \\"
+  echo "      stat                        \\"
+  echo "  |& tee \"\$STATS\""
+  echo
+  echo "  # show progress"
+  echo "  infomsg \"creating spectrogram: \$INTRO\""
+  echo
+  echo "  # intro spectrogram"
+  echo "  sox -V0       \\"
+  echo "      \"\$AUDIO\"  \\"
+  echo "      --null    \\"
+  echo "      trim 0 20 \\"
+  echo "      spectrogram -X 250 -y 513 -Z 0 -z 120 -o \"\$INTRO\""
+  echo
+  echo "  # show progress"
+  echo "  infomsg \"creating spectrogram: \$TOTAL\""
+  echo
+  echo "  # total spectrogram"
+  echo "  sox -V0      \\"
+  echo "      \"\$AUDIO\" \\"
+  echo "      --null   \\"
+  echo "      spectrogram -x 5000 -y 513 -Z 0 -z 120 -o \"\$TOTAL\""
+  echo
+  echo "  # show progress"
+  echo "  infomsg \"creating spectrogram: \$OUTRO\""
+  echo
+  echo "  # outro spectrogram"
+  echo "  sox -V0       \\"
+  echo "      \"\$AUDIO\"  \\"
+  echo "      --null    \\"
+  echo "      reverse   \\"
+  echo "      trim 0 20 \\"
+  echo "      reverse   \\"
+  echo "      spectrogram -X 250 -y 513 -Z 0 -z 120 -o \"\$OUTRO\""
+  echo "}"
+  echo
+  echo "# ------"
+  echo "# encode"
+  echo "# ------"
+  echo "#"
+  echo "# \$1  genre"
+  echo "# \$2  artist"
+  echo "# \$3  album"
+  echo "# \$4  year"
+  echo "# \$5  tracknumber"
+  echo "# \$6  title"
+  echo "# \$7  comment"
+  echo "# \$8  image"
+  echo "# \$9  output filename"
+  echo "#"
+  echo "function encode()"
+  echo "{"
+  echo "  # create tagged mp3 file"
+  echo "  lame --quiet                \\"
+  echo "       --strictly-enforce-ISO \\"
+  echo "       --noreplaygain         \\"
+  echo "       -p                     \\"
+  echo "       -r                     \\"
+  echo "       -s \"44.1\"              \\"
+  echo "       --bitwidth \"24\"        \\"
+  echo "       --signed               \\"
+  echo "       --little-endian        \\"
+  echo "       --vbr-new              \\"
+  echo "       -b \"160\"               \\"
+  echo "       -B \"320\"               \\"
+  echo "       -F                     \\"
+  echo "       --id3v2-only           \\"
+  echo "       --tg \"\$1\"              \\"
+  echo "       --ta \"\$2\"              \\"
+  echo "       --tl \"\$3\"              \\"
+  echo "       --ty \"\$4\"              \\"
+  echo "       --tn \"\$5\"              \\"
+  echo "       --tt \"\$6\"              \\"
+  echo "       --tc \"\$7\"              \\"
+  echo "       --ti \"\$8\"              \\"
+  echo "       -                      \\"
+  echo "       \"\$9\"                   \\"
+  echo "       2>\"/dev/null\""
+  echo
+  echo "  # check resulting file"
+  echo "  if [ ! -s \"\$9\" ] ; then"
+  echo
+  echo "    # remove empty file if present"
+  echo "    rm -f \"\$9\""
+  echo
+  echo "    # notify user"
+  echo "    failmsg \"unable to encode audio: \\\"\$9\\\"\""
+  echo
+  echo "    # signalize trouble"
+  echo "    return 1"
+  echo
+  echo "  fi"
+  echo
+  echo "  # show progress"
+  echo "  donemsg \"file created: \$9\""
+  echo
+  echo "  # signalize success"
+  echo "  return 0"
+  echo "}"
+}
+
+# -------------------
+# show_track_function
+# -------------------
+#
+# $1  track number
+# $2  filename
+#
+function show_track_function()
+{
+  echo "# --------"
+  printf "# track%03d\n" "$1"
+  echo "# --------"
+  echo "#"
+  printf "# %s\n" "$(basename "$2")"
+  echo "#"
+  printf "function track%03d()\n" "$1"
+  echo "{"
+  echo "  # input file"
+  echo "  local TRACKFILE=\"$2\""
+  echo
+  echo "  # create temporary file"
+  printf "  local TEMPFILE=\$(mktemp --suffix=\".track%03d\")\n" "$1"
+  echo
+  echo "  # clean up on exit"
+  echo "  trap 'rm -f \"\$TEMPFILE\"' EXIT"
+  echo
+  echo "  # try to decode audio data"
+  echo "  if decode \"\$TRACKFILE\" \"\$TEMPFILE\" ; then"
+  echo
+  echo "    # process audio and push to stdout"
+  echo "    sox --type     \"raw\"            \\"
+  echo "        --channels \"2\"              \\"
+  echo "        --rate     \"44100\"          \\"
+  echo "        --bits     \"24\"             \\"
+  echo "        --encoding \"signed-integer\" \\"
+  echo "        --endian   \"little\"         \\"
+  echo "        \"\$TEMPFILE\"                 \\"
+  echo "        --type     \"raw\"            \\"
+  echo "        --channels \"2\"              \\"
+  echo "        --rate     \"44100\"          \\"
+  echo "        --bits     \"24\"             \\"
+  echo "        --encoding \"signed-integer\" \\"
+  echo "        --endian   \"little\"         \\"
+  echo "        -                           \\"
+  echo "        gain -n -1"
+  echo
+  echo "  fi"
+  echo
+  echo "  # remove temporary file"
+  echo "  rm -f \"\$TEMPFILE\""
+  echo
+  echo "  # disable trap"
+  echo "  trap - EXIT"
+  echo "}"
+}
+
+# ----------
+# show_outro
+# ----------
+#
+# $1  number of tracks
+#
+function show_outro()
+{
+  echo "# ------------------------------------------------------------------------------"
+  echo "# commands                                                              commands"
+  echo "# ------------------------------------------------------------------------------"
+  echo
+  echo "# tag information"
+  echo "ID3GENRE=\"Genre\""
+  echo "ID3ARTIST=\"Artist\""
+  echo "ID3ALBUM=\"Album\""
+  echo "ID3YEAR=\$(date \"+%Y\")"
+  echo "ID3TRACK=\"1\""
+  echo "ID3TITLE=\"Title\""
+  echo "ID3COMMENT=\"Comment\""
+  echo "ID3IMAGE=\"cover.png\""
+  echo "OUTFILE=\"\$(str2basename <<< \"\$ID3TITLE\").mp3\""
+  echo
+  echo "# concatenate audio from this group"
+  echo "{"
+  echo
+
+  for (( TNO = 1 ; TNO <= $1 ; TNO++ )) ; do
+
+    printf "  track%03d\n" "$TNO"
+
+  done
+
+  echo
+  echo "} | playback"
+  echo "#} | analyze"
+  echo "#} | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\""
+  echo
+  echo "# signalize success"
+  echo "exit 0"
+  echo
+
+  # show sox effects
+  MANWIDTH=120 man sox | sed -nre "/^EFFECTS/,/^DIAGNOSTICS/ { /^DIAGNOSTICS/ d ; s/^/# /p }"
+}
+
+# ------------------------------------------------------------------------------
+# options                                                                options
+# ------------------------------------------------------------------------------
+
+# set default values
+OPMODE="DEFAULT"
+DATASOURCE=""
+
+# set options to accept
+readonly KNOWN_OPTIONS=":hvd:p:"
+
+# check passed options
+while getopts "$KNOWN_OPTIONS" OPTION "$@"
+do
+
+  case "$OPTION" in
+
+    # show help
+    "h") OPMODE="SHOW_HELP"
+         ;;
+
+    # show version
+    "v") OPMODE="SHOW_VERSION"
+         ;;
+
+    # search directory
+    "d") OPMODE="SEARCH_DIRECTORY"
+         DATASOURCE="$OPTARG"
+         ;;
+
+    # read playlist
+    "p") OPMODE="READ_PLAYLIST"
+         DATASOURCE="$OPTARG"
+         ;;
+
+    "?") failmsg "unknown option: -$OPTARG"
+         exit 1
+         ;;
+
+    ":") failmsg "missing argument: -$OPTARG <argument>"
+         exit 1
+         ;;
+
+  esac
+
+done
+
+# get number of positional parameters
+PPNUM=$(( $# - OPTIND + 1 ))
+
+# check number of positional parameters
+if (( PPNUM > 0 )) ; then
+
+  # notify user
+  failmsg "no positional parameters allowed"
+
+  # signalize trouble
+  exit 1
+
+fi
+
+# drop all parsed options
+shift $(( OPTIND - 1 ))
+
+# ------------------------------------------------------------------------------
+# commands                                                              commands
+# ------------------------------------------------------------------------------
+
+# show help
+if [ "$OPMODE" == "SHOW_HELP" ] ; then
+
+  show_help
+
+  # stop here
+  exit 0
+
+fi
+
+# show version
+if [ "$OPMODE" == "SHOW_VERSION" ] ; then
+
+  show_version
+
+  # stop here
+  exit 0
+
+fi
+
+# read media files from directory
+if [ "$OPMODE" == "SEARCH_DIRECTORY" ] ; then
+
+  # set extensions to search
+  REGEX=".+\.("
+  REGEX="${REGEX}[Mm][Pp][34Gg]"
+  REGEX="${REGEX}|[Ff][Ll][Aa][Cc]"
+  REGEX="${REGEX}|[Oo][Gg][Gg]"
+  REGEX="${REGEX}|[Ww][Aa][Vv]"
+  REGEX="${REGEX}|[Aa][Vv][Ii]"
+  REGEX="${REGEX}|[Ww][Mm][Vv]"
+  REGEX="${REGEX}|[Ff][Ll][Vv]"
+  REGEX="${REGEX}|[Mm][Oo][Vv]"
+  REGEX="${REGEX})$"
+
+  # pipe all files to new instance
+  find "$DATASOURCE"               \
+       -type "f"                   \
+       -regextype "posix-extended" \
+       -regex "$REGEX"             \
+       -print0                     \
+  | sort -z                        \
+  | "$0"
+
+  # stop here
+  exit $?
+
+fi
+
+# read media files from playlist
+if [ "$OPMODE" == "READ_PLAYLIST" ] ; then
+
+  # pipe all files to new instance
+  sed --regexp-extended \
+      --expression="
+
+        # skip empty lines
+        /^[[:space:]]*$/ d
+
+        # skip comments
+        /^#/ d
+
+      " "$DATASOURCE" \
+  | tr '\n' '\0'      \
+  | "$0"
+
+  # stop here
+  exit $?
+
+fi
+
+# start bash script
+show_intro
+
+# number of audio tracks
+COUNTER=0
+
+# read NULL terminated filenames from stdin
+while read -rd $'\0' FILENAME
+do
+
+  # increment counter
+  (( COUNTER += 1 ))
+
+  # check current limit
+  if (( COUNTER > 999 )) ; then
+
+    # notify user
+    failmsg "too many files given (max 999)"
+
+    # signalize trouble
+    exit 1
+
+  fi
+
+  # add empty line
+  echo
+
+  # create function
+  show_track_function "$COUNTER" "$FILENAME"
+
+done
+
+# add empty line
+echo
+
+# finish bash script
+show_outro "$COUNTER"
+
+# signalize success
+exit 0
+
