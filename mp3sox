@@ -307,6 +307,17 @@ function show_intro()
   echo "#"
   echo "function decode()"
   echo "{"
+  echo "  # check path"
+  echo "  if [ ! -f \"\$1\" ] ; then"
+  echo
+  echo "    # notify user"
+  echo "    failmsg \"unable to locate file: \\\"\$1\\\"\""
+  echo
+  echo "    # signalize trouble"
+  echo "    return 1"
+  echo
+  echo "  fi"
+  echo
   echo "  # show progress"
   echo "  infomsg \"trying sox decoding: \$1\""
   echo
