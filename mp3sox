@@ -71,7 +71,7 @@ function show_help()
 #
 function show_version()
 {
-  echo "v2019-01-30"
+  echo "v2019-02-02"
 }
 
 # -------
@@ -120,6 +120,119 @@ function donemsg()
 {
   # push to stderr
   echo -e "${GREEN}[DONE]${NONE} $1" 1>&2
+}
+
+# ----------
+# utf82ascii
+# ----------
+#
+# ... | utf82ascii | ...
+#
+function utf82ascii()
+{
+  sed --regexp-extended \
+      --expression="
+        # escape all colons
+        s/:/:c/g
+
+        # escape all native question marks (iconv may introduce much more)
+        s/\\?/:q/g
+
+        # collection of characters that aren't translated (suitable) by iconv
+        s/¦/|/g
+        s/¡/!/g
+        s/¿/:q/g
+        s/„/\"/g
+        s/«/\"/g
+        s/»/\"/g
+        s/÷/\//g
+        s/±/+-/g
+        s/¹/^1/g
+        s/²/^2/g
+        s/³/^3/g
+        s/Ä/Ae/g
+        s/ä/ae/g
+        s/Ö/Oe/g
+        s/ö/oe/g
+        s/Ü/Ue/g
+        s/ü/ue/g
+        s/Ø/Oe/g
+        s/ø/oe/g
+        s/Ð/Dh/g
+        s/ð/dh/g
+        s/Þ/Th/g
+        s/þ/th/g
+      "                                       \
+  | iconv --from-code "UTF-8"                 \
+          --to-code "ASCII//TRANSLIT//IGNORE" \
+  | sed --regexp-extended                     \
+        --expression="
+          # remove all question marks introduced by iconv
+          s/\\?//g
+
+          # restore all escaped question marks
+          s/:q/?/g
+
+          # restore all escaped colons
+          s/:c/:/g
+        "
+}
+
+# ------------
+# str2basename
+# ------------
+#
+# ... | str2basename | ...
+#
+function str2basename()
+{
+  sed --regexp-extended \
+      --expression="
+
+        # convert to lowercase
+        s/.+/\L&/
+
+        # replace all non alphanumeric characters
+        s/[^[:alnum:]]+/_/g
+
+        # trim both ends
+        s/^_+//
+        s/_+$//
+
+        # limit filename to the first 200 characters
+        s/^(.{200}).*/\1/
+
+        # trim end
+        s/_+$//
+      "
+}
+
+# ----------
+# path2title
+# ----------
+#
+# ... | path2title | ...
+#
+function path2title()
+{
+  sed --regexp-extended \
+      --expression="
+
+        # remove leading directories
+        s|.+/||
+
+        # remove extension
+        s|(.+)\.[^\.]+$|\1|
+
+        # replace underscores with white space
+        s|_+| |g
+
+        # start title with a capital letter
+        s|^[[:alpha:]]|\U&|
+
+        # start each word with a capital letter
+        s| ([[:alpha:]])| \U\1|g
+      "
 }
 
 # ----------
@@ -211,91 +324,6 @@ function show_intro()
   echo "{"
   echo "  # push to stderr"
   echo "  echo -e \"\${GREEN}[DONE]\${NONE} \$1\" 1>&2"
-  echo "}"
-  echo
-  echo "# ----------"
-  echo "# utf82ascii"
-  echo "# ----------"
-  echo "#"
-  echo "# ... | utf82ascii | ..."
-  echo "#"
-  echo "function utf82ascii()"
-  echo "{"
-  echo "  sed --regexp-extended \\"
-  echo "      --expression=\""
-  echo "        # escape all colons"
-  echo "        s/:/:c/g"
-  echo
-  echo "        # escape all native question marks (iconv may introduce much more)"
-  echo "        s/\\\\?/:q/g"
-  echo
-  echo "        # collection of characters that aren't translated (suitable) by iconv"
-  echo "        s/¦/|/g"
-  echo "        s/¡/!/g"
-  echo "        s/¿/:q/g"
-  echo "        s/„/\\\"/g"
-  echo "        s/«/\\\"/g"
-  echo "        s/»/\\\"/g"
-  echo "        s/÷/\\//g"
-  echo "        s/±/+-/g"
-  echo "        s/¹/^1/g"
-  echo "        s/²/^2/g"
-  echo "        s/³/^3/g"
-  echo "        s/Ä/Ae/g"
-  echo "        s/ä/ae/g"
-  echo "        s/Ö/Oe/g"
-  echo "        s/ö/oe/g"
-  echo "        s/Ü/Ue/g"
-  echo "        s/ü/ue/g"
-  echo "        s/Ø/Oe/g"
-  echo "        s/ø/oe/g"
-  echo "        s/Ð/Dh/g"
-  echo "        s/ð/dh/g"
-  echo "        s/Þ/Th/g"
-  echo "        s/þ/th/g"
-  echo "      \"                                       \\"
-  echo "  | iconv --from-code \"UTF-8\"                 \\"
-  echo "          --to-code \"ASCII//TRANSLIT//IGNORE\" \\"
-  echo "  | sed --regexp-extended                     \\"
-  echo "        --expression=\""
-  echo "          # remove all question marks introduced by iconv"
-  echo "          s/\\\\?//g"
-  echo
-  echo "          # restore all escaped question marks"
-  echo "          s/:q/?/g"
-  echo
-  echo "          # restore all escaped colons"
-  echo "          s/:c/:/g"
-  echo "        \""
-  echo "}"
-  echo
-  echo "# ------------"
-  echo "# str2basename"
-  echo "# ------------"
-  echo "#"
-  echo "# ... | str2basename | ..."
-  echo "#"
-  echo "function str2basename()"
-  echo "{"
-  echo "  sed --regexp-extended \\"
-  echo "      --expression=\""
-  echo
-  echo "        # convert to lowercase"
-  echo "        s/.+/\\L&/"
-  echo
-  echo "        # replace all non alphanumeric characters"
-  echo "        s/[^[:alnum:]]+/_/g"
-  echo
-  echo "        # trim both ends"
-  echo "        s/^_+//"
-  echo "        s/_+\$//"
-  echo
-  echo "        # limit filename to the first 200 characters"
-  echo "        s/^(.{200}).*/\\1/"
-  echo
-  echo "        # trim end"
-  echo "        s/_+\$//"
-  echo "      \""
   echo "}"
   echo
   echo "# ------"
@@ -551,19 +579,42 @@ function show_intro()
 #
 function show_track_function()
 {
+  # format track number
+  local readonly TN=$(printf "%03d" "$1")
+
   echo "# --------"
-  printf "# track%03d\n" "$1"
+  echo "# track$TN"
   echo "# --------"
   echo "#"
-  printf "# %s\n" "$(basename "$2")"
+  echo "# $(basename "$2")"
   echo "#"
-  printf "function track%03d()\n" "$1"
+  echo "function track$TN()"
   echo "{"
+  echo "  # check given parameter"
+  echo "  if (( \$# > 0 )) ; then"
+  echo
+  echo "    case \"\$1\" in"
+  echo
+  echo "      # return track number"
+  echo "      \"-n\") echo \"$1\" ;;"
+  echo
+  echo "      # return title"
+  echo "      \"-t\") echo \"$(path2title <<< "$2" | utf82ascii)\" ;;"
+  echo
+  echo "      # return filename"
+  echo "      \"-f\") echo \"${TN}_$(path2title <<< "$2" | utf82ascii | str2basename).mp3\" ;;"
+  echo
+  echo "    esac"
+  echo
+  echo "    return"
+  echo
+  echo "  fi"
+  echo
   echo "  # input file"
   echo "  local TRACKFILE=\"$2\""
   echo
   echo "  # create temporary file"
-  printf "  local TEMPFILE=\$(mktemp --suffix=\".track%03d\")\n" "$1"
+  echo "  local TEMPFILE=\$(mktemp --suffix=\".track$TN\")"
   echo
   echo "  # clean up on exit"
   echo "  trap 'rm -f \"\$TEMPFILE\"' EXIT"
@@ -619,15 +670,15 @@ function show_outro()
   echo "ID3TITLE=\"Title\""
   echo "ID3COMMENT=\"Comment\""
   echo "ID3IMAGE=\"cover.png\""
-  echo "OUTFILE=\"\$(str2basename <<< \"\$ID3TITLE\").mp3\""
+  echo "OUTFILE=\"outfile.mp3\""
   echo
   echo "# concatenate audio from this group"
   echo "{"
   echo
 
-  for (( TNO = 1 ; TNO <= $1 ; TNO++ )) ; do
+  for (( TN = 1 ; TN <= $1 ; TN++ )) ; do
 
-    printf "  track%03d\n" "$TNO"
+    printf "  track%03d\n" "$TN"
 
   done
 
