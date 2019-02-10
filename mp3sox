@@ -54,6 +54,7 @@ function show_help()
   echo "   -h         show help and exit"
   echo "   -v         show version and exit"
   echo "   -d <dir>   read filenames from directory"
+  echo "   -n <int>   set initial track number"
   echo "   -p <file>  read filenames from m3u file"
   echo
   echo "EXAMPLE"
@@ -71,7 +72,7 @@ function show_help()
 #
 function show_version()
 {
-  echo "v2019-02-02"
+  echo "v2019-02-10"
 }
 
 # -------
@@ -702,9 +703,10 @@ function show_outro()
 # set default values
 OPMODE="DEFAULT"
 DATASOURCE=""
+TRACKSTART="1"
 
 # set options to accept
-readonly KNOWN_OPTIONS=":hvd:p:"
+readonly KNOWN_OPTIONS=":hvd:p:n:"
 
 # check passed options
 while getopts "$KNOWN_OPTIONS" OPTION "$@"
@@ -728,6 +730,10 @@ do
     # read playlist
     "p") OPMODE="READ_PLAYLIST"
          DATASOURCE="$OPTARG"
+         ;;
+
+    # set initial track number
+    "n") TRACKSTART="$OPTARG"
          ;;
 
     "?") failmsg "unknown option: -$OPTARG"
@@ -805,7 +811,7 @@ if [ "$OPMODE" == "SEARCH_DIRECTORY" ] ; then
        -regex "$REGEX"             \
        -print0                     \
   | sort -z                        \
-  | "$0"
+  | "$0" -n "$TRACKSTART"
 
   # stop here
   exit $?
@@ -827,7 +833,7 @@ if [ "$OPMODE" == "READ_PLAYLIST" ] ; then
 
       " "$DATASOURCE" \
   | tr '\n' '\0'      \
-  | "$0"
+  | "$0" -n "$TRACKSTART"
 
   # stop here
   exit $?
@@ -838,14 +844,11 @@ fi
 show_intro
 
 # number of audio tracks
-COUNTER=0
+COUNTER="$TRACKSTART"
 
 # read NULL terminated filenames from stdin
 while read -rd $'\0' FILENAME
 do
-
-  # increment counter
-  (( COUNTER += 1 ))
 
   # check current limit
   if (( COUNTER > 999 )) ; then
@@ -863,6 +866,9 @@ do
 
   # create function
   show_track_function "$COUNTER" "$FILENAME"
+
+  # increment counter
+  (( COUNTER += 1 ))
 
 done
 
