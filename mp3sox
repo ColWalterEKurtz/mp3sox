@@ -650,11 +650,48 @@ function show_track_function()
   echo "}"
 }
 
+# ----------------------
+# show_itemized_function
+# ----------------------
+#
+# $1  first track number
+# $2  last track number + 1
+#
+function show_itemized_function()
+{
+  echo "# --------"
+  echo "# itemized"
+  echo "# --------"
+  echo "#"
+  echo "#"
+  echo "#"
+  echo "function itemized()"
+  echo "{"
+
+  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
+
+    printf "  ID3TRACK=\$(track%03d -n)\n" "$TN"
+    printf "  ID3TITLE=\$(track%03d -t)\n" "$TN"
+    printf "   OUTFILE=\$(track%03d -f)\n" "$TN"
+    printf "  track%03d | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\"\n" "$TN"
+
+    if (( (TN + 1) < $2 )) ; then
+
+      echo
+
+    fi
+
+  done
+
+  echo "}"
+}
+
 # ----------
 # show_outro
 # ----------
 #
-# $1  number of tracks
+# $1  first track number
+# $2  last track number + 1
 #
 function show_outro()
 {
@@ -677,7 +714,7 @@ function show_outro()
   echo "{"
   echo
 
-  for (( TN = 1 ; TN <= $1 ; TN++ )) ; do
+  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
 
     printf "  track%03d\n" "$TN"
 
@@ -875,8 +912,14 @@ done
 # add empty line
 echo
 
+# show function that creates single mp3 files
+show_itemized_function "$TRACKSTART" "$COUNTER"
+
+# add empty line
+echo
+
 # finish bash script
-show_outro "$COUNTER"
+show_outro "$TRACKSTART" "$COUNTER"
 
 # signalize success
 exit 0
