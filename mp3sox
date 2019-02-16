@@ -809,7 +809,7 @@ DATASOURCE=""
 TRACKSTART="1"
 
 # set options to accept
-readonly KNOWN_OPTIONS=":hvd:p:n:"
+readonly KNOWN_OPTIONS=":hvd:f:p:n:"
 
 # check passed options
 while getopts "$KNOWN_OPTIONS" OPTION "$@"
@@ -827,6 +827,11 @@ do
 
     # search directory
     "d") OPMODE="SEARCH_DIRECTORY"
+         DATASOURCE="$OPTARG"
+         ;;
+
+    # use option's argument
+    "f") OPMODE="READ_FIRST_PARAM"
          DATASOURCE="$OPTARG"
          ;;
 
@@ -915,6 +920,17 @@ if [ "$OPMODE" == "SEARCH_DIRECTORY" ] ; then
        -print0                     \
   | sort -z                        \
   | "$0" -n "$TRACKSTART"
+
+  # stop here
+  exit $?
+
+fi
+
+# use option's argument
+if [ "$OPMODE" == "READ_FIRST_PARAM" ] ; then
+
+  # pipe file to new instance
+  printf "%s\0" "$DATASOURCE" | "$0" -n "$TRACKSTART"
 
   # stop here
   exit $?
