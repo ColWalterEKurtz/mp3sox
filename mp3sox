@@ -179,35 +179,6 @@ function utf82ascii()
         "
 }
 
-# ------------
-# str2basename
-# ------------
-#
-# ... | str2basename | ...
-#
-function str2basename()
-{
-  sed --regexp-extended \
-      --expression="
-
-        # convert to lowercase
-        s/.+/\L&/
-
-        # replace all non alphanumeric characters
-        s/[^[:alnum:]]+/_/g
-
-        # trim both ends
-        s/^_+//
-        s/_+$//
-
-        # limit filename to the first 200 characters
-        s/^(.{200}).*/\1/
-
-        # trim end
-        s/_+$//
-      "
-}
-
 # ----------
 # path2title
 # ----------
@@ -325,6 +296,91 @@ function show_intro()
   echo "{"
   echo "  # push to stderr"
   echo "  echo -e \"\${GREEN}[DONE]\${NONE} \$1\" 1>&2"
+  echo "}"
+  echo
+  echo "# ----------"
+  echo "# utf82ascii"
+  echo "# ----------"
+  echo "#"
+  echo "# ... | utf82ascii | ..."
+  echo "#"
+  echo "function utf82ascii()"
+  echo "{"
+  echo "  sed --regexp-extended \\"
+  echo "      --expression=\""
+  echo "        # escape all colons"
+  echo "        s/:/:c/g"
+  echo
+  echo "        # escape all native question marks (iconv may introduce much more)"
+  echo "        s/\\\\?/:q/g"
+  echo
+  echo "        # collection of characters that aren't translated (suitable) by iconv"
+  echo "        s/¦/|/g"
+  echo "        s/¡/!/g"
+  echo "        s/¿/:q/g"
+  echo "        s/„/\\\"/g"
+  echo "        s/«/\\\"/g"
+  echo "        s/»/\\\"/g"
+  echo "        s/÷/\\//g"
+  echo "        s/±/+-/g"
+  echo "        s/¹/^1/g"
+  echo "        s/²/^2/g"
+  echo "        s/³/^3/g"
+  echo "        s/Ä/Ae/g"
+  echo "        s/ä/ae/g"
+  echo "        s/Ö/Oe/g"
+  echo "        s/ö/oe/g"
+  echo "        s/Ü/Ue/g"
+  echo "        s/ü/ue/g"
+  echo "        s/Ø/Oe/g"
+  echo "        s/ø/oe/g"
+  echo "        s/Ð/Dh/g"
+  echo "        s/ð/dh/g"
+  echo "        s/Þ/Th/g"
+  echo "        s/þ/th/g"
+  echo "      \"                                       \\"
+  echo "  | iconv --from-code \"UTF-8\"                 \\"
+  echo "          --to-code \"ASCII//TRANSLIT//IGNORE\" \\"
+  echo "  | sed --regexp-extended                     \\"
+  echo "        --expression=\""
+  echo "          # remove all question marks introduced by iconv"
+  echo "          s/\\\\?//g"
+  echo
+  echo "          # restore all escaped question marks"
+  echo "          s/:q/?/g"
+  echo
+  echo "          # restore all escaped colons"
+  echo "          s/:c/:/g"
+  echo "        \""
+  echo "}"
+  echo
+  echo "# ------------"
+  echo "# str2basename"
+  echo "# ------------"
+  echo "#"
+  echo "# ... | str2basename | ..."
+  echo "#"
+  echo "function str2basename()"
+  echo "{"
+  echo "  sed --regexp-extended \\"
+  echo "      --expression=\""
+  echo
+  echo "        # convert to lowercase"
+  echo "        s/.+/\\L&/"
+  echo
+  echo "        # replace all non alphanumeric characters"
+  echo "        s/[^[:alnum:]]+/_/g"
+  echo
+  echo "        # trim both ends"
+  echo "        s/^_+//"
+  echo "        s/_+\$//"
+  echo
+  echo "        # limit filename to the first 200 characters"
+  echo "        s/^(.{200}).*/\\1/"
+  echo
+  echo "        # trim end"
+  echo "        s/_+\$//"
+  echo "      \""
   echo "}"
   echo
   echo "# ------"
@@ -596,17 +652,18 @@ function show_track_function()
   echo
   echo "    case \"\$1\" in"
   echo
-  echo "      # return track number"
+  echo "      \"-g\") echo \"\$ID3GENRE\" ;;"
+  echo "      \"-a\") echo \"\$ID3ARTIST\" ;;"
+  echo "      \"-b\") echo \"\$ID3ALBUM\" ;;"
+  echo "      \"-y\") echo \"\$ID3YEAR\" ;;"
   echo "      \"-n\") echo \"$1\" ;;"
-  echo
-  echo "      # return title"
   echo "      \"-t\") echo \"$(path2title <<< "$2" | utf82ascii)\" ;;"
-  echo
-  echo "      # return filename"
-  echo "      \"-f\") echo \"${TN}_$(path2title <<< "$2" | utf82ascii | str2basename).mp3\" ;;"
+  echo "      \"-c\") echo \"\$ID3COMMENT\" ;;"
+  echo "      \"-i\") echo \"\$ID3IMAGE\" ;;"
   echo
   echo "    esac"
   echo
+  echo "    # don't process audio"
   echo "    return"
   echo
   echo "  fi"
@@ -670,9 +727,15 @@ function show_itemized_function()
 
   for (( TN = $1 ; TN < $2 ; TN++ )) ; do
 
-    printf "  ID3TRACK=\$(track%03d -n)\n" "$TN"
-    printf "  ID3TITLE=\$(track%03d -t)\n" "$TN"
-    printf "   OUTFILE=\$(track%03d -f)\n" "$TN"
+    printf "    ID3GENRE=\$(track%03d -g)\n" "$TN"
+    printf "   ID3ARTIST=\$(track%03d -a)\n" "$TN"
+    printf "    ID3ALBUM=\$(track%03d -b)\n" "$TN"
+    printf "     ID3YEAR=\$(track%03d -y)\n" "$TN"
+    printf "    ID3TRACK=\$(track%03d -n)\n" "$TN"
+    printf "    ID3TITLE=\$(track%03d -t)\n" "$TN"
+    printf "  ID3COMMENT=\$(track%03d -c)\n" "$TN"
+    printf "    ID3IMAGE=\$(track%03d -i)\n" "$TN"
+    echo   "     OUTFILE=\$(printf \"%03d %s %s\" \"\$ID3TRACK\" \"\$ID3ARTIST\" \"\$ID3TITLE\" | utf82ascii | str2basename | sed -re \"s/\$/.mp3/\")"
     printf "  track%03d | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\"\n" "$TN"
 
     if (( (TN + 1) < $2 )) ; then
@@ -683,6 +746,9 @@ function show_itemized_function()
 
   done
 
+  echo
+  echo "  # signalize success"
+  echo "  exit 0"
   echo "}"
 }
 
