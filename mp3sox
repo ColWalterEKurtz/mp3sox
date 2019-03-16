@@ -707,22 +707,57 @@ function show_track_function()
   echo "}"
 }
 
-# ----------------------
-# show_itemized_function
-# ----------------------
+# -------------------------
+# show_concatenate_function
+# -------------------------
 #
 # $1  first track number
 # $2  last track number + 1
 #
-function show_itemized_function()
+function show_concatenate_function()
 {
-  echo "# --------"
-  echo "# itemized"
-  echo "# --------"
+  echo "# -----------"
+  echo "# concatenate"
+  echo "# -----------"
   echo "#"
   echo "#"
   echo "#"
-  echo "function itemized()"
+  echo "function concatenate()"
+  echo "{"
+  echo "  # concatenate audio from this group"
+  echo "  {"
+  echo
+
+  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
+
+    printf "    track%03d\n" "$TN"
+
+  done
+
+  echo
+  echo "  } | playback"
+  echo "  #} | analyze"
+  echo "  #} | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\""
+
+  echo "}"
+}
+
+# ---------------------
+# show_itemize_function
+# ---------------------
+#
+# $1  first track number
+# $2  last track number + 1
+#
+function show_itemize_function()
+{
+  echo "# -------"
+  echo "# itemize"
+  echo "# -------"
+  echo "#"
+  echo "#"
+  echo "#"
+  echo "function itemize()"
   echo "{"
 
   for (( TN = $1 ; TN < $2 ; TN++ )) ; do
@@ -746,9 +781,6 @@ function show_itemized_function()
 
   done
 
-  echo
-  echo "  # signalize success"
-  echo "  exit 0"
   echo "}"
 }
 
@@ -756,8 +788,7 @@ function show_itemized_function()
 # show_outro
 # ----------
 #
-# $1  first track number
-# $2  last track number + 1
+#
 #
 function show_outro()
 {
@@ -765,31 +796,22 @@ function show_outro()
   echo "# commands                                                              commands"
   echo "# ------------------------------------------------------------------------------"
   echo
-  echo "# tag information"
-  echo "ID3GENRE=\"Genre\""
-  echo "ID3ARTIST=\"Artist\""
+  echo "# default tag information"
+  echo "ID3GENRE=\"Playlist\""
+  echo "ID3ARTIST=\"Playlist\""
   echo "ID3ALBUM=\"Album\""
-  echo "ID3YEAR=\$(date \"+%Y\")"
+  echo "ID3YEAR=\"\$(date \"+%Y\")\""
   echo "ID3TRACK=\"1\""
-  echo "ID3TITLE=\"Title\""
-  echo "ID3COMMENT=\"Comment\""
-  echo "ID3IMAGE=\"cover.png\""
-  echo "OUTFILE=\"outfile.mp3\""
+  echo "ID3TITLE=\"\$(date \"+\$ID3ALBUM v%Y-%m-%d+%H:%M:%S\")\""
+  echo "ID3COMMENT=\"TODO: contrast, trim\""
+  echo "ID3IMAGE=\"playlist.png\""
+  echo "OUTFILE=\"\$(str2basename <<< \"\$ID3TITLE\").mp3\""
   echo
-  echo "# concatenate audio from this group"
-  echo "{"
+  echo "# create single mp3 files"
+  echo "# itemize"
   echo
-
-  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
-
-    printf "  track%03d\n" "$TN"
-
-  done
-
-  echo
-  echo "} | playback"
-  echo "#} | analyze"
-  echo "#} | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\""
+  echo "# create one single mp3 file"
+  echo "# concatenate"
   echo
   echo "# signalize success"
   echo "exit 0"
@@ -995,13 +1017,19 @@ done
 echo
 
 # show function that creates single mp3 files
-show_itemized_function "$TRACKSTART" "$COUNTER"
+show_itemize_function "$TRACKSTART" "$COUNTER"
+
+# add empty line
+echo
+
+# show function that creates one single mp3 file
+show_concatenate_function "$TRACKSTART" "$COUNTER"
 
 # add empty line
 echo
 
 # finish bash script
-show_outro "$TRACKSTART" "$COUNTER"
+show_outro
 
 # signalize success
 exit 0
