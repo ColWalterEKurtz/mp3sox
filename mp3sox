@@ -817,8 +817,8 @@ function show_outro()
   echo "exit 0"
   echo
 
-  # show sox effects
-  MANWIDTH=120 man sox | sed -nre "/^EFFECTS/,/^DIAGNOSTICS/ { /^DIAGNOSTICS/ d ; s/^/# /p }"
+  # show syntax of sox effects
+  man sox | sed -nre "/   Supported Effects/,/   Deprecated Effects/{ /Note:.+README/d ; s/^ {7}([^[:space:]].+)/# \1/p }"
 }
 
 # ------------------------------------------------------------------------------
