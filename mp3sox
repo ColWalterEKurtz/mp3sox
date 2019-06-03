@@ -690,7 +690,7 @@ function show_track_function()
   echo "  local TRACKFILE=\"$2\""
   echo
   echo "  # create temporary file"
-  echo "  local TEMPFILE=\$(mktemp)"
+  echo "  local TEMPFILE=\$(mktemp --suffix=\".mp3sox\")"
   echo
   echo "  # clean up on exit"
   echo "  trap 'rm -f \"\$TEMPFILE\"' EXIT"
@@ -713,7 +713,12 @@ function show_track_function()
   echo "        --encoding \"signed-integer\" \\"
   echo "        --endian   \"little\"         \\"
   echo "        -                           \\"
-  echo "        gain -n -1"
+  echo "        gain -n \"-1\"                \\"
+  echo "        #contrast \"50\"               \\"
+  echo "        #trim \"00:00:02.5\"           \\"
+  echo "        #fade \"l\" \"0.5\"              \\"
+  echo "        #fade \"t\" 0 \"00:02:59\" \"2\"   \\"
+  echo "        #pad \"0\" \"1\""
   echo
   echo "  fi"
   echo
@@ -738,24 +743,17 @@ function show_concatenate_function()
   echo "# concatenate"
   echo "# -----------"
   echo "#"
-  echo "#"
+  echo "# This function pushes all audio data to stdout."
   echo "#"
   echo "function concatenate()"
   echo "{"
-  echo "  # concatenate audio from this group"
-  echo "  {"
-  echo
+  echo "  # concatenate these tracks"
 
   for (( TN = $1 ; TN < $2 ; TN++ )) ; do
 
-    printf "    track%03d\n" "$TN"
+    printf "  track%03d\n" "$TN"
 
   done
-
-  echo
-  echo "  } | playback"
-  echo "  #} | analyze"
-  echo "  #} | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\""
 
   echo "}"
 }
@@ -773,7 +771,7 @@ function show_itemize_function()
   echo "# itemize"
   echo "# -------"
   echo "#"
-  echo "#"
+  echo "# This functions converts each track to its own mp3 file."
   echo "#"
   echo "function itemize()"
   echo "{"
@@ -828,8 +826,11 @@ function show_outro()
   echo "# create single mp3 files"
   echo "# itemize"
   echo
+  echo "# play all"
+  echo "concatenate | playback"
+  echo
   echo "# create one single mp3 file"
-  echo "# concatenate"
+  echo "# concatenate | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\""
   echo
   echo "# signalize success"
   echo "exit 0"
