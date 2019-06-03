@@ -72,7 +72,7 @@ function show_help()
 #
 function show_version()
 {
-  echo "v2019-02-10"
+  echo "v2019-06-04"
 }
 
 # -------
@@ -580,6 +580,44 @@ function show_intro()
   echo "      spectrogram -X 250 -y 513 -Z 0 -z 120 -o \"\$OUTRO\""
   echo "}"
   echo
+  echo "# -------"
+  echo "# rmsgrep"
+  echo "# -------"
+  echo "#"
+  echo "# This function returns the RMS level in dB from the given track."
+  echo "#"
+  echo "# ... | rmsgrep <filename> | ..."
+  echo "#"
+  echo "function rmsgrep()"
+  echo "{"
+  echo "  sox --type     \"raw\"            \\"
+  echo "      --channels \"2\"              \\"
+  echo "      --rate     \"44100\"          \\"
+  echo "      --bits     \"24\"             \\"
+  echo "      --encoding \"signed-integer\" \\"
+  echo "      --endian   \"little\"         \\"
+  echo "      -                           \\"
+  echo "      --null                      \\"
+  echo "      stats                       \\"
+  echo "      2>&1                        \\"
+  echo "  | sed -re \"\$ a \$1\"              \\"
+  echo "  | sed --quiet                   \\"
+  echo "        --regexp-extended         \\"
+  echo "        --expression=\""
+  echo
+  echo "          # grep these information"
+  echo "          s/^Pk lev dB[[:space:]]+([^[:space:]]+).+/\\1(Pk)/"
+  echo "          s/^RMS lev dB[[:space:]]+([^[:space:]]+).+/\\1(RMS)/"
+  echo
+  echo "          # append information to hold space"
+  echo "          T nocopy ; H ; :nocopy"
+  echo
+  echo "          # last line"
+  echo "          \$ { H ; g ; s/[[:space:]]+/ /g ; s/^ // ; s/ \$// ; p }"
+  echo
+  echo "        \""
+  echo "}"
+  echo
   echo "# ------"
   echo "# encode"
   echo "# ------"
@@ -665,11 +703,15 @@ function show_track_function()
   echo "#"
   echo "function track$TN()"
   echo "{"
+  echo "  # input file"
+  echo "  local TRACKFILE=\"$2\""
+  echo
   echo "  # check given parameter"
   echo "  if (( \$# > 0 )) ; then"
   echo
   echo "    case \"\$1\" in"
   echo
+  echo "      \"-f\") echo \"\$TRACKFILE\" ;;"
   echo "      \"-g\") echo \"\$ID3GENRE\" ;;"
   echo "      \"-a\") echo \"\$ID3ARTIST\" ;;"
   echo "      \"-b\") echo \"\$ID3ALBUM\" ;;"
@@ -685,9 +727,6 @@ function show_track_function()
   echo "    return"
   echo
   echo "  fi"
-  echo
-  echo "  # input file"
-  echo "  local TRACKFILE=\"$2\""
   echo
   echo "  # create temporary file"
   echo "  local TEMPFILE=\$(mktemp --suffix=\".mp3sox\")"
@@ -727,34 +766,6 @@ function show_track_function()
   echo
   echo "  # disable trap"
   echo "  trap - EXIT"
-  echo "}"
-}
-
-# -------------------------
-# show_concatenate_function
-# -------------------------
-#
-# $1  first track number
-# $2  last track number + 1
-#
-function show_concatenate_function()
-{
-  echo "# -----------"
-  echo "# concatenate"
-  echo "# -----------"
-  echo "#"
-  echo "# This function pushes all audio data to stdout."
-  echo "#"
-  echo "function concatenate()"
-  echo "{"
-  echo "  # concatenate these tracks"
-
-  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
-
-    printf "  track%03d\n" "$TN"
-
-  done
-
   echo "}"
 }
 
@@ -800,6 +811,61 @@ function show_itemize_function()
   echo "}"
 }
 
+# ------------------------
+# show_levelcheck_function
+# ------------------------
+#
+# $1  first track number
+# $2  last track number + 1
+#
+function show_levelcheck_function()
+{
+  echo "# ----------"
+  echo "# levelcheck"
+  echo "# ----------"
+  echo "#"
+  echo "# This function returns the RMS level in dB from all tracks."
+  echo "#"
+  echo "function levelcheck()"
+  echo "{"
+
+  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
+
+    printf "  track%03d | rmsgrep \"\$(track%03d -f)\"\n" "$TN" "$TN"
+
+  done
+
+  echo "}"
+}
+
+# -------------------------
+# show_concatenate_function
+# -------------------------
+#
+# $1  first track number
+# $2  last track number + 1
+#
+function show_concatenate_function()
+{
+  echo "# -----------"
+  echo "# concatenate"
+  echo "# -----------"
+  echo "#"
+  echo "# This function pushes all audio data to stdout."
+  echo "#"
+  echo "function concatenate()"
+  echo "{"
+  echo "  # concatenate these tracks"
+
+  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
+
+    printf "  track%03d\n" "$TN"
+
+  done
+
+  echo "}"
+}
+
 # ----------
 # show_outro
 # ----------
@@ -819,15 +885,18 @@ function show_outro()
   echo "ID3YEAR=\"\$(date \"+%Y\")\""
   echo "ID3TRACK=\"1\""
   echo "ID3TITLE=\"\$(date \"+\$ID3ALBUM v%Y-%m-%d+%H:%M:%S\")\""
-  echo "ID3COMMENT=\"TODO: contrast, trim\""
+  echo "ID3COMMENT=\"TODO: contrast, trim, fade\""
   echo "ID3IMAGE=\"playlist.png\""
   echo "OUTFILE=\"\$(str2basename <<< \"\$ID3TITLE\").mp3\""
+  echo
+  echo "# detect RMS level"
+  echo "levelcheck"
   echo
   echo "# create single mp3 files"
   echo "# itemize"
   echo
   echo "# play all"
-  echo "concatenate | playback"
+  echo "# concatenate | playback"
   echo
   echo "# create one single mp3 file"
   echo "# concatenate | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\""
@@ -1037,6 +1106,12 @@ echo
 
 # show function that creates single mp3 files
 show_itemize_function "$TRACKSTART" "$COUNTER"
+
+# add empty line
+echo
+
+# show function that returns the RMS level in dB from each track
+show_levelcheck_function "$TRACKSTART" "$COUNTER"
 
 # add empty line
 echo
