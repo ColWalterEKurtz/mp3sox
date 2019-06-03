@@ -383,6 +383,24 @@ function show_intro()
   echo "      \""
   echo "}"
   echo
+  echo "# ----------"
+  echo "# file2track"
+  echo "# ----------"
+  echo "#"
+  echo "# This function counts the number of mp3 files in the current directory and adds 1."
+  echo "#"
+  echo "function file2track()"
+  echo "{"
+  echo "  find -maxdepth  \"1\"              \\"
+  echo "       -type      \"f\"              \\"
+  echo "       -regextype \"posix-extended\" \\"
+  echo "       -regex     \".+\\.[Mm][Pp]3\$\" \\"
+  echo "       -printf    \"x\"              \\"
+  echo "  | wc -c                          \\"
+  echo "  | sed -re \"s/.+/&+1/\"            \\"
+  echo "  | bc"
+  echo "}"
+  echo
   echo "# ------"
   echo "# decode"
   echo "# ------"
@@ -672,7 +690,7 @@ function show_track_function()
   echo "  local TRACKFILE=\"$2\""
   echo
   echo "  # create temporary file"
-  echo "  local TEMPFILE=\$(mktemp --suffix=\".track$TN\")"
+  echo "  local TEMPFILE=\$(mktemp)"
   echo
   echo "  # clean up on exit"
   echo "  trap 'rm -f \"\$TEMPFILE\"' EXIT"
