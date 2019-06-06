@@ -811,33 +811,6 @@ function show_itemize_function()
   echo "}"
 }
 
-# ------------------------
-# show_levelcheck_function
-# ------------------------
-#
-# $1  first track number
-# $2  last track number + 1
-#
-function show_levelcheck_function()
-{
-  echo "# ----------"
-  echo "# levelcheck"
-  echo "# ----------"
-  echo "#"
-  echo "# This function returns the RMS level in dB from all tracks."
-  echo "#"
-  echo "function levelcheck()"
-  echo "{"
-
-  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
-
-    printf "  track%03d | rmsgrep \"\$(track%03d -f)\"\n" "$TN" "$TN"
-
-  done
-
-  echo "}"
-}
-
 # -------------------------
 # show_concatenate_function
 # -------------------------
@@ -870,7 +843,8 @@ function show_concatenate_function()
 # show_outro
 # ----------
 #
-#
+# $1  first track number
+# $2  last track number + 1
 #
 function show_outro()
 {
@@ -888,15 +862,29 @@ function show_outro()
   echo "ID3COMMENT=\"TODO: contrast, trim, fade\""
   echo "ID3IMAGE=\"playlist.png\""
   echo "OUTFILE=\"\$(str2basename <<< \"\$ID3TITLE\").mp3\""
+
   echo
   echo "# detect RMS level"
-  echo "levelcheck"
+  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
+
+    printf "track%03d | rmsgrep \"\$(track%03d -f)\"\n" "$TN" "$TN"
+
+  done
+
   echo
-  echo "# create single mp3 files"
-  echo "# itemize"
+  echo "# check in detail"
+  for (( TN = $1 ; TN < $2 ; TN++ )) ; do
+
+    printf "# track%03d | analyze\n" "$TN"
+
+  done
+
   echo
   echo "# play all"
   echo "# concatenate | playback"
+  echo
+  echo "# create single mp3 files"
+  echo "# itemize"
   echo
   echo "# create one single mp3 file"
   echo "# concatenate | encode \"\$ID3GENRE\" \"\$ID3ARTIST\" \"\$ID3ALBUM\" \"\$ID3YEAR\" \"\$ID3TRACK\" \"\$ID3TITLE\" \"\$ID3COMMENT\" \"\$ID3IMAGE\" \"\$OUTFILE\""
@@ -1104,26 +1092,20 @@ done
 # add empty line
 echo
 
-# show function that creates single mp3 files
-show_itemize_function "$TRACKSTART" "$COUNTER"
-
-# add empty line
-echo
-
-# show function that returns the RMS level in dB from each track
-show_levelcheck_function "$TRACKSTART" "$COUNTER"
-
-# add empty line
-echo
-
 # show function that creates one single mp3 file
 show_concatenate_function "$TRACKSTART" "$COUNTER"
 
 # add empty line
 echo
 
+# show function that creates single mp3 files
+show_itemize_function "$TRACKSTART" "$COUNTER"
+
+# add empty line
+echo
+
 # finish bash script
-show_outro
+show_outro "$TRACKSTART" "$COUNTER"
 
 # signalize success
 exit 0
