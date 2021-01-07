@@ -72,7 +72,7 @@ function show_help()
 #
 function show_version()
 {
-  echo "v2019-11-30"
+  echo "v2021-01-07"
 }
 
 # -------
@@ -352,6 +352,25 @@ function show_intro()
   echo "          # restore all escaped colons"
   echo "          s/:c/:/g"
   echo "        \""
+  echo "}"
+  echo
+  echo "# -------"
+  echo "# debrace"
+  echo "# -------"
+  echo "#"
+  echo "# ... | debrace | ..."
+  echo "#"
+  echo "function debrace()"
+  echo "{"
+  echo "  sed --regexp-extended \\"
+  echo "      --expression=\""
+  echo "        # remove empty brackets"
+  echo "        s/\\([[:space:]]*\\)//g"
+  echo "        s/\\[[[:space:]]*\\]//g"
+  echo "        s/\\{[[:space:]]*\\}//g"
+  echo "        # squeeze white space"
+  echo "        s/[[:space:]]+/ /g ; s/^ // ; s/ \$//"
+  echo "      \""
   echo "}"
   echo
   echo "# ------------"
@@ -634,14 +653,14 @@ function show_intro()
   echo "#"
   echo "function encode()"
   echo "{"
-  echo "  # name numbered parameters"
-  echo "  local TG=\"\$(utf82ascii <<< \"\$1\")\""
-  echo "  local TA=\"\$(utf82ascii <<< \"\$2\")\""
-  echo "  local TL=\"\$(utf82ascii <<< \"\$3\")\""
-  echo "  local TY=\"\$(utf82ascii <<< \"\$4\")\""
-  echo "  local TN=\"\$(utf82ascii <<< \"\$5\")\""
-  echo "  local TT=\"\$(utf82ascii <<< \"\$6\")\""
-  echo "  local TC=\"\$(utf82ascii <<< \"\$7\")\""
+  echo "  # name and format numbered parameters"
+  echo "  local TG=\"\$(utf82ascii <<< \"\$1\" | debrace)\""
+  echo "  local TA=\"\$(utf82ascii <<< \"\$2\" | debrace)\""
+  echo "  local TL=\"\$(utf82ascii <<< \"\$3\" | debrace)\""
+  echo "  local TY=\"\$(utf82ascii <<< \"\$4\" | debrace)\""
+  echo "  local TN=\"\$(utf82ascii <<< \"\$5\" | debrace)\""
+  echo "  local TT=\"\$(utf82ascii <<< \"\$6\" | debrace)\""
+  echo "  local TC=\"\$(utf82ascii <<< \"\$7\" | debrace)\""
   echo "  local TI=\"\$8\""
   echo "  local OF=\"\$9\""
   echo
